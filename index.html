@@ -183,6 +183,7 @@ input[type=checkbox]{width:13px;height:13px;cursor:pointer;accent-color:var(--bl
   <a data-view="3" onclick="switchStageView('3')">Assess Floorplan<span class="navcount" id="nc-3"></span></a>
   <a data-view="4" onclick="switchStageView('4')">Scratch Check<span class="navcount" id="nc-4"></span></a>
   <a data-view="5" onclick="switchStageView('5')">Schedule Viewing<span class="navcount" id="nc-5"></span></a>
+  <a data-view="map" onclick="switchStageView('map')">Map</a>
 </nav>
 
 <div id="overlay-home" style="display:none;position:fixed;top:44px;left:0;right:0;bottom:0;background:#f7f6f3;z-index:900;overflow-y:auto;padding:24px">
@@ -192,6 +193,9 @@ input[type=checkbox]{width:13px;height:13px;cursor:pointer;accent-color:var(--bl
 </div>
 <div id="overlay-placeholder" style="display:none;position:fixed;top:44px;left:0;right:0;bottom:0;background:#f7f6f3;z-index:900;overflow-y:auto;padding:24px;text-align:center;color:#6b6a65">
   <div style="padding-top:100px"><div style="font-size:13.5px;color:#1a1a18;margin-bottom:4px;font-weight:600">Coming soon</div>Built next.</div>
+</div>
+<div id="overlay-map" style="display:none;position:fixed;top:44px;left:0;right:0;bottom:0;background:#f7f6f3;z-index:900">
+  <div id="allmap" style="width:100%;height:100%"></div>
 </div>
 <div id="overlay-qs" style="display:none;position:fixed;top:44px;left:0;right:0;bottom:0;background:#f7f6f3;z-index:900;overflow-y:auto;padding:24px">
   <div style="max-width:1400px;margin:0 auto">
@@ -407,9 +411,11 @@ function switchStageView(view){
   document.querySelectorAll(".sitenav a").forEach(function(a){ a.classList.toggle("active", a.dataset.view === view); });
   document.getElementById("overlay-home").style.display = view === "home" ? "block" : "none";
   document.getElementById("overlay-qs").style.display = view === "qs" ? "block" : "none";
-  document.getElementById("overlay-placeholder").style.display = (view !== "home" && view !== "qs" && view !== "1" && view !== "2" && view !== "3" && view !== "4") ? "block" : "none";
+  document.getElementById("overlay-map").style.display = view === "map" ? "block" : "none";
+  document.getElementById("overlay-placeholder").style.display = (view !== "home" && view !== "qs" && view !== "map" && view !== "1" && view !== "2" && view !== "3" && view !== "4") ? "block" : "none";
   if (view === "home") renderStageGridSummary();
   if (view === "qs") initQuickSearch();
+  if (view === "map") { initAllMap(); setTimeout(function(){ if(allMapObj){allMapObj.invalidateSize();} updateAllMap(); }, 50); }
   if (view === "1") switchTab("inbox");
   if (view === "2") switchTab("enquiry");
   if (view === "3") switchTab("floorplan_review");
@@ -1640,6 +1646,8 @@ async function loadListings(){
       macro_data:r.macro_score_data||null,
       micro_data:r.micro_score_data||null,
       status:r.status||'inbox',
+      matched_area:r.matched_area||null,
+      matched_postcode:r.matched_postcode||null,
       selected:false,
       lat:null,lng:null,
       _dbId:r.id
@@ -3071,6 +3079,54 @@ async function updateMap(){
   setTimeout(function(){mapObj.invalidateSize();},100);
 }
 window.mapAct=function(id,ns){action(id,ns);};
+
+// MAP TAB — shows every listing regardless of stage, same marker/click-to-sidebar
+// pattern as the per-stage map, just not filtered down to the current tab.
+var allMapObj=null, allMarkers={};
+var STAGE_LABELS={inbox:'Visual Check',enquiry:'Get Floorplan',floorplan_review:'Assess Floorplan',scratch_check:'Scratch Check',schedule_viewing:'Schedule Viewing',rejected:'Rejected'};
+function initAllMap(){
+  if(allMapObj)return;
+  allMapObj=L.map('allmap',{zoomControl:true}).setView([51.505,-0.09],11);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{
+    attribution:'&copy; OpenStreetMap contributors &copy; CARTO',subdomains:'abcd',maxZoom:19
+  }).addTo(allMapObj);
+}
+async function updateAllMap(){
+  if(!allMapObj)return;
+  Object.values(allMarkers).forEach(function(m){m.remove();});allMarkers={};
+  for(var i=0;i<listings.length;i++){
+    var l=listings[i];
+    if(!l.lat&&l.postcode){
+      try{
+        var gR=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(l.postcode+', UK')+'&region=gb&key='+GK);
+        var gD=await gR.json();
+        if(gD.status==='OK'&&gD.results.length){l.lat=gD.results[0].geometry.location.lat;l.lng=gD.results[0].geometry.location.lng;}
+      }catch(e){}
+    }
+    if(!l.lat||!l.lng)continue;
+    var col=scoreColor(l.combined);
+    var sz=l.combined>=4?16:l.combined>=3?14:12;
+    var icon=L.divIcon({className:'',html:'<div style="width:'+sz+'px;height:'+sz+'px;border-radius:50%;background:'+col+';border:2px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.35);cursor:pointer"></div>',iconSize:[sz,sz],iconAnchor:[Math.round(sz/2),Math.round(sz/2)]});
+    (function(lid,llat,llng,ll){
+      var mk=L.marker([llat,llng],{icon:icon}).addTo(allMapObj);
+      var popupHtml='<div style="font-size:12px;line-height:1.5;min-width:170px">'
+        +'<strong>'+(ll.addr||'').replace(/</g,'&lt;')+'</strong><br>'
+        +'Stage: <strong>'+(STAGE_LABELS[ll.status]||ll.status)+'</strong><br>'
+        +(ll.combined!=null?'Score: <strong>'+ll.combined.toFixed(1)+'/5</strong><br>':'')
+        +(ll.matched_area?'Area: <strong>'+ll.matched_area+'</strong>':'')
+        +'</div>';
+      mk.bindPopup(popupHtml);
+      mk.on('mouseover',function(){mk.openPopup();});
+      mk.on('mouseout',function(){mk.closePopup();});
+      mk.on('click',function(e){
+        L.DomEvent.stopPropagation(e);
+        showDetail(lid);
+      });
+      allMarkers[lid]=mk;
+    })(l.id,l.lat,l.lng,l);
+  }
+  setTimeout(function(){allMapObj.invalidateSize();},100);
+}
 
 function setView(mode){
   viewMode=mode;
