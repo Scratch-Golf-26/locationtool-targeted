@@ -3075,11 +3075,12 @@ async function updateMap(){
     var sz=l.combined>=4?16:l.combined>=3?14:12;
     var icon=L.divIcon({className:'',html:'<div style="width:'+sz+'px;height:'+sz+'px;border-radius:50%;background:'+col+';border:2px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.35);cursor:pointer"></div>',iconSize:[sz,sz],iconAnchor:[Math.round(sz/2),Math.round(sz/2)]});
     (function(lid,llat,llng,ll){
+      try{
       var mk=L.marker([llat,llng],{icon:icon}).addTo(mapObj);
       var md={};try{md=JSON.parse(ll.macro_data||'{}');}catch(e){}
       var popupHtml='<div style="font-size:12px;line-height:1.5;min-width:160px">'
         +'<strong>'+(ll.addr||'').replace(/</g,'&lt;')+'</strong><br>'
-        +(ll.combined!=null?'Score: <strong>'+ll.combined.toFixed(1)+'/5</strong><br>':'')
+        +(ll.combined!=null?'Score: <strong>'+Number(ll.combined).toFixed(1)+'/5</strong><br>':'')
         +(md.population!=null?'Population (MSOA): <strong>'+Math.round(md.population).toLocaleString()+'</strong><br>':'')
         +(ll.msoa_code?'MSOA: <strong>'+ll.msoa_code+'</strong>':'')
         +'</div>';
@@ -3091,6 +3092,7 @@ async function updateMap(){
         showDetail(lid);
       });
       markers[lid]=mk;
+      }catch(e){console.warn('Skipping marker for',lid,e);}
     })(l.id,l.lat,l.lng,l);
   }
   setTimeout(function(){mapObj.invalidateSize();},100);
@@ -3119,11 +3121,12 @@ async function updateAllMap(){
     var sz=l.combined>=4?16:l.combined>=3?14:12;
     var icon=L.divIcon({className:'',html:'<div style="width:'+sz+'px;height:'+sz+'px;border-radius:50%;background:'+col+';border:2px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.35);cursor:pointer"></div>',iconSize:[sz,sz],iconAnchor:[Math.round(sz/2),Math.round(sz/2)]});
     (function(lid,llat,llng,ll){
+      try{
       var mk=L.marker([llat,llng],{icon:icon}).addTo(allMapObj);
       var popupHtml='<div style="font-size:12px;line-height:1.5;min-width:170px">'
         +'<strong>'+(ll.addr||'').replace(/</g,'&lt;')+'</strong><br>'
         +'Stage: <strong>'+(STAGE_LABELS[ll.status]||ll.status)+'</strong><br>'
-        +(ll.combined!=null?'Score: <strong>'+ll.combined.toFixed(1)+'/5</strong><br>':'')
+        +(ll.combined!=null?'Score: <strong>'+Number(ll.combined).toFixed(1)+'/5</strong><br>':'')
         +(ll.matched_area?'Area: <strong>'+ll.matched_area+'</strong>':'')
         +'</div>';
       mk.bindPopup(popupHtml);
@@ -3134,6 +3137,7 @@ async function updateAllMap(){
         showDetail(lid);
       });
       allMarkers[lid]=mk;
+      }catch(e){console.warn('Skipping marker for',lid,e);}
     })(l.id,l.lat,l.lng,l);
   }
   setTimeout(function(){allMapObj.invalidateSize();},100);
