@@ -1649,7 +1649,7 @@ async function loadListings(){
       matched_area:r.matched_area||null,
       matched_postcode:r.matched_postcode||null,
       selected:false,
-      lat:null,lng:null,
+      lat:r.lat!=null?Number(r.lat):null,lng:r.lng!=null?Number(r.lng):null,
       _dbId:r.id
     };
   });
@@ -3040,19 +3040,36 @@ function initMap(){
     attribution:'&copy; OpenStreetMap contributors &copy; CARTO',subdomains:'abcd',maxZoom:19
   }).addTo(mapObj);
 }
+// Geocodes whatever in `list` is missing lat/lng, in concurrent batches rather than
+// one-at-a-time (392 sequential round trips was taking minutes), and persists each
+// result back to listings_targeted so it's never re-geocoded on a future page load.
+async function geocodeAndPersist(list){
+  var toGeocode=list.filter(function(l){return !l.lat&&l.postcode;});
+  if(!toGeocode.length)return;
+  if(typeof toast==='function')toast('Locating '+toGeocode.length+' listing'+(toGeocode.length===1?'':'s')+' on the map…');
+  var chunkSize=25;
+  for(var c=0;c<toGeocode.length;c+=chunkSize){
+    var chunk=toGeocode.slice(c,c+chunkSize);
+    await Promise.all(chunk.map(async function(l){
+      try{
+        var gR=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(l.postcode+', UK')+'&region=gb&key='+GK);
+        var gD=await gR.json();
+        if(gD.status==='OK'&&gD.results.length){
+          l.lat=gD.results[0].geometry.location.lat;
+          l.lng=gD.results[0].geometry.location.lng;
+          db.from('listings_targeted').update({lat:l.lat,lng:l.lng}).eq('id',l.id).then(function(){});
+        }
+      }catch(e){}
+    }));
+  }
+}
 async function updateMap(){
   if(!mapObj)return;
   Object.values(markers).forEach(function(m){m.remove();});markers={};
   var fl=filtered();
+  await geocodeAndPersist(fl);
   for(var i=0;i<fl.length;i++){
     var l=fl[i];
-    if(!l.lat&&l.postcode){
-      try{
-        var gR=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(l.postcode+', UK')+'&region=gb&key='+GK);
-        var gD=await gR.json();
-        if(gD.status==='OK'&&gD.results.length){l.lat=gD.results[0].geometry.location.lat;l.lng=gD.results[0].geometry.location.lng;}
-      }catch(e){}
-    }
     if(!l.lat||!l.lng)continue;
     var col=scoreColor(l.combined);
     var sz=l.combined>=4?16:l.combined>=3?14:12;
@@ -3094,15 +3111,9 @@ function initAllMap(){
 async function updateAllMap(){
   if(!allMapObj)return;
   Object.values(allMarkers).forEach(function(m){m.remove();});allMarkers={};
+  await geocodeAndPersist(listings);
   for(var i=0;i<listings.length;i++){
     var l=listings[i];
-    if(!l.lat&&l.postcode){
-      try{
-        var gR=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(l.postcode+', UK')+'&region=gb&key='+GK);
-        var gD=await gR.json();
-        if(gD.status==='OK'&&gD.results.length){l.lat=gD.results[0].geometry.location.lat;l.lng=gD.results[0].geometry.location.lng;}
-      }catch(e){}
-    }
     if(!l.lat||!l.lng)continue;
     var col=scoreColor(l.combined);
     var sz=l.combined>=4?16:l.combined>=3?14:12;
