@@ -2949,6 +2949,34 @@ function toggleSel(id,v){listings.find(function(l){return l.id===id;}).selected=
 function toggleSelAll(v){filtered().forEach(function(l){l.selected=v;});render();}
 function clearSel(){listings.forEach(function(l){l.selected=false;});render();}
 
+// Hands a listing off to the in-house pipeline once it clears Scratch Check. Creates a
+// fresh row in inhouse_sites (status: 'viewing') carrying over everything useful, and
+// records source_listing_id so it's traceable back to this listing.
+async function sendToInhousePlatform(l){
+  var payload={
+    address:l.addr||'',
+    rent:l.best_rent_price||l.price||null,
+    sqft:l.size||null,
+    agency_name:l.agent||null,
+    agent_phone:l.agent_phone||null,
+    listing_url:l.url||null,
+    notes:l.notes||null,
+    source:'on_market',
+    source_listing_id:l._dbId||null,
+    macro_score_v2:l.macro!=null?Math.round(l.macro):null,
+    macro_score_v2_reasoning:l.macro_reasoning||null,
+    macro_score_data:l.macro_data||null,
+    micro_score_v2:l.micro!=null?Math.round(l.micro):null,
+    micro_score_v2_reasoning:l.micro_reasoning||null,
+    micro_score_data:l.micro_data||null,
+    floorplan_url:l.floorplan_url||null,
+    bay_layout:l.bay_layout||null,
+    expected_bays:l.expected_bays||null,
+    status:'viewing'
+  };
+  var res=await db.from('inhouse_sites').insert(payload);
+  if(res.error)throw new Error('In-house handoff failed: '+res.error.message);
+}
 async function action(id,ns){
   var l=listings.find(function(x){return x.id===id;});
   if(!l){console.error('action: listing not found',id);toast('Error: listing not found');return;}
@@ -2959,7 +2987,16 @@ async function action(id,ns){
     toast('→ Added to Enquiry list');
     render();updateCounts();return;
   }
-  if(ns==='accepted'){
+  if(ns==='schedule_viewing'){
+    try{
+      await sendToInhousePlatform(l);
+      if(l._dbId)await db.from('listings_targeted').update({status:ns}).eq('id',l._dbId);
+      l.status=ns;l.selected=false;
+      toast('✓ Passed Scratch Check → sent to In-House Pipeline (Viewing)');
+    }catch(e){
+      toast('In-house handoff error: '+e.message);return;
+    }
+  } else if(ns==='accepted'){
     try{
       await sendToProspecting(l);
       l.status=ns;l.selected=false;
