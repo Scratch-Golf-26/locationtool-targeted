@@ -379,7 +379,7 @@ input[type=checkbox]{width:13px;height:13px;cursor:pointer;accent-color:var(--bl
               <div class="scbtns"><button class="scok" id="s4-sc-ok">Confirm</button><button class="sccx" id="s4-sc-cx">Cancel</button></div>
             </div>
           </div>
-          <div class="pl-st"><span id="s4-pl-status">No floorplan loaded</span><span>drag handle to rotate · shift = snap 5°</span></div>
+          <div class="pl-st"><span id="s4-pl-stl">No floorplan loaded</span><span>drag handle to rotate · shift = snap 5°</span></div>
           <div class="bay-summary" id="s4-bay-summary" style="display:none"></div>
         </div>
         <div id="s4-cost-wrap" style="background:#fff;border:1px solid #e8e7e2;border-radius:10px;padding:14px 16px;margin-bottom:16px;display:none">
@@ -587,14 +587,14 @@ function s4OpenListing(id){
   document.getElementById('s4-pl-empty').style.display='none';
   if(l.floorplan_url){
     if(/\.pdf(\?|$)/i.test(l.floorplan_url)){
-      document.getElementById('s4-pl-status').textContent='Loading PDF…';
+      document.getElementById('s4-pl-stl').textContent='Loading PDF…';
       s3PdfFirstPageToImg(l.floorplan_url).then(function(img){s4PlLoad(img);})
-        .catch(function(err){document.getElementById('s4-pl-status').textContent='Could not load the floorplan PDF: '+err.message;});
+        .catch(function(err){document.getElementById('s4-pl-stl').textContent='Could not load the floorplan PDF: '+err.message;});
     }else{
       var img=new Image();
       img.crossOrigin='anonymous';
       img.onload=function(){s4PlLoad(img);};
-      img.onerror=function(){document.getElementById('s4-pl-status').textContent='Could not load the floorplan image.';};
+      img.onerror=function(){document.getElementById('s4-pl-stl').textContent='Could not load the floorplan image.';};
       img.src=l.floorplan_url;
     }
   }else{
