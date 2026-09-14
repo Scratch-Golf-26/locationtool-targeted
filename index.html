@@ -617,7 +617,7 @@ async function initS4MiniMap(l){
   if(!document.getElementById('s4-minimap'))return;
   if(!lat||!lng){el.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#aaa;font-size:11px">Location unavailable</div>';return;}
   _s4MiniMap=L.map('s4-minimap',{zoomControl:false,attributionControl:false}).setView([lat,lng],15);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:19}).addTo(_s4MiniMap);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{subdomains:'abc',maxZoom:19}).addTo(_s4MiniMap);
   L.marker([lat,lng]).addTo(_s4MiniMap);
   var msoaBlend=msoaBlendOf(l);
   if(msoaBlend&&_s4MiniMap)await drawMsoaBlendOn(_s4MiniMap,msoaBlend);
@@ -1392,7 +1392,7 @@ async function initCallModalMiniMap(l){
   if(!document.getElementById('call-modal-minimap'))return; // modal closed while geocoding
   if(!lat||!lng){el.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#aaa;font-size:11px">Location unavailable</div>';return;}
   _callModalMiniMap=L.map('call-modal-minimap',{zoomControl:false,attributionControl:false}).setView([lat,lng],15);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:19}).addTo(_callModalMiniMap);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{subdomains:'abc',maxZoom:19}).addTo(_callModalMiniMap);
   L.marker([lat,lng]).addTo(_callModalMiniMap);
   setTimeout(function(){if(_callModalMiniMap)_callModalMiniMap.invalidateSize();},100);
 }
@@ -2296,7 +2296,7 @@ async function runQuickSearchScore(){
       document.getElementById('qs-map').style.display='block';
       if(!qsMapObj){
         qsMapObj=L.map('qs-map',{zoomControl:true}).setView([l.lat,l.lng],15);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:19}).addTo(qsMapObj);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{subdomains:'abc',maxZoom:19}).addTo(qsMapObj);
       }
       setTimeout(function(){qsMapObj.invalidateSize();},50);
       if(qsMarker){qsMapObj.removeLayer(qsMarker);qsMarker=null;}
@@ -2662,7 +2662,7 @@ async function initDetailMiniMap(l){
   if(!document.getElementById('dp-minimap'))return; // sidebar closed while we were geocoding
   if(!lat||!lng){el.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#aaa;font-size:11px">Location unavailable</div>';return;}
   _dpMiniMap=L.map('dp-minimap',{zoomControl:false,attributionControl:false}).setView([lat,lng],15);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:19}).addTo(_dpMiniMap);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{subdomains:'abc',maxZoom:19}).addTo(_dpMiniMap);
   L.marker([lat,lng]).addTo(_dpMiniMap);
   var blend=msoaBlendOf(l);
   if(blend&&_dpMiniMap)await drawMsoaBlendOn(_dpMiniMap,blend);
@@ -3073,8 +3073,8 @@ function scoreColor(v){
 function initMap(){
   if(mapObj)return;
   mapObj=L.map('map',{zoomControl:true}).setView([51.505,-0.09],11);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{
-    attribution:'&copy; OpenStreetMap contributors &copy; CARTO',subdomains:'abcd',maxZoom:19
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    attribution:'&copy; OpenStreetMap contributors',subdomains:'abc',maxZoom:19
   }).addTo(mapObj);
 }
 // Geocodes whatever in `list` is missing lat/lng, in concurrent batches rather than
@@ -3143,8 +3143,8 @@ var STAGE_LABELS={inbox:'Visual Check',enquiry:'Get Floorplan',floorplan_review:
 function initAllMap(){
   if(allMapObj)return;
   allMapObj=L.map('allmap',{zoomControl:true}).setView([51.505,-0.09],11);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{
-    attribution:'&copy; OpenStreetMap contributors &copy; CARTO',subdomains:'abcd',maxZoom:19
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    attribution:'&copy; OpenStreetMap contributors',subdomains:'abc',maxZoom:19
   }).addTo(allMapObj);
 }
 async function updateAllMap(){
